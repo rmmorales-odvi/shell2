@@ -1,0 +1,1782 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head><script>(function(){
+  function makeStore(){
+    var data = {};
+    var api = {
+      getItem: function(k){ return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+      setItem: function(k, v){ data[k] = String(v); },
+      removeItem: function(k){ delete data[k]; },
+      clear: function(){ data = {}; },
+      key: function(i){ return Object.keys(data)[i] || null; }
+    };
+    Object.defineProperty(api, 'length', { get: function(){ return Object.keys(data).length; } });
+    return api;
+  }
+  function tryShim(name){
+    var works = false;
+    try { works = !!window[name] && typeof window[name].getItem === 'function'; void window[name].length; }
+    catch (_) { works = false; }
+    if (works) return;
+    try { Object.defineProperty(window, name, { configurable: true, value: makeStore() }); }
+    catch (_) { try { window[name] = makeStore(); } catch (__) {} }
+  }
+  tryShim('localStorage');
+  tryShim('sessionStorage');
+})();</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIST Master Plan Builder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        :root {
+            --bg: #ffffff;
+            --surface: #fafafa;
+            --fg: #171717;
+            --muted: #4d4d4d;
+            --border: rgba(0, 0, 0, 0.08);
+            --border-strong: rgba(0, 0, 0, 0.15);
+            --accent: #0072f5;
+            --accent-warm: #ff5b4f;
+            --focus: hsla(212, 100%, 48%, 1);
+            
+            --font: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0px 0px 0px 1px var(--border);
+        }
+
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            letter-spacing: -0.01em;
+            color: var(--fg);
+            text-decoration: none;
+        }
+
+        .logo svg { width: 28px; height: 28px; }
+
+        nav { display: flex; gap: 4px; }
+
+        .tab-btn {
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            background: transparent;
+            color: var(--muted);
+            letter-spacing: -0.01em;
+        }
+
+        .tab-btn:hover { background: var(--surface); color: var(--fg); }
+        .tab-btn.active { background: var(--fg); color: #fff; }
+
+        .header-actions { display: flex; gap: 8px; }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            color: var(--muted);
+            box-shadow: 0px 0px 0px 1px var(--border);
+        }
+
+        .icon-btn:hover { background: var(--surface); color: var(--fg); }
+        .icon-btn svg { width: 16px; height: 16px; }
+
+        /* Toast */
+        #error-toast {
+            position: fixed;
+            top: 72px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--fg);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 100;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Main */
+        main {
+            flex: 1;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg);
+            border-radius: 8px;
+            box-shadow: 0px 0px 0px 1px var(--border), 0px 2px 2px rgba(0,0,0,0.04), #fafafa 0px 0px 0px 1px;
+            padding: 32px;
+        }
+
+        /* Typography */
+        h1 { font-size: 32px; font-weight: 600; letter-spacing: -1.28px; line-height: 1.2; }
+        h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.96px; line-height: 1.25; }
+        h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.32px; }
+        
+        .subtitle { font-size: 15px; color: var(--muted); margin-top: 8px; }
+        .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+
+        /* Section dividers */
+        .section { margin-bottom: 48px; }
+        .section-header { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .section-header h2 { margin: 0; }
+        .section-header svg { width: 20px; height: 20px; color: var(--muted); }
+
+        /* NIST Function Pills */
+        .function-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .function-card {
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            box-shadow: 0px 0px 0px 1px var(--border);
+            transition: all 0.15s ease;
+        }
+
+        .function-card:hover { box-shadow: 0px 0px 0px 1px var(--border), 0px 4px 8px rgba(0,0,0,0.04); }
+
+        .function-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: -0.01em;
+        }
+
+        .function-header svg { width: 18px; height: 18px; }
+
+        .function-desc { font-size: 14px; color: var(--muted); line-height: 1.6; }
+        .function-desc strong { color: var(--fg); font-weight: 500; }
+
+        .fn-GV { background: #f1f5f9; }
+        .fn-GV .function-header { color: #64748b; }
+        .fn-ID { background: #d1fae5; }
+        .fn-ID .function-header { color: #059669; }
+        .fn-PR { background: #ede9fe; }
+        .fn-PR .function-header { color: #7c3aed; }
+        .fn-DE { background: #fef3c7; }
+        .fn-DE .function-header { color: #d97706; }
+        .fn-RS { background: #fce7f3; }
+        .fn-RS .function-header { color: #db2777; }
+        .fn-RC { background: #dbeafe; }
+        .fn-RC .function-header { color: #2563eb; }
+
+        .function-header .phase-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 6px; border-radius: 3px; margin-left: 8px; }
+        .function-header .phase-badge.phase-1 { background: #2563eb; color: #fff; }
+        .function-header .phase-badge.phase-2 { background: #d97706; color: #fff; }
+        .function-header .phase-badge.phase-3 { background: #059669; color: #fff; }
+
+        /* Steps */
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .step-card {
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            box-shadow: 0px 0px 0px 1px var(--border);
+        }
+
+        .step-card h3 { font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .step-card h3 svg { width: 16px; height: 16px; }
+        .step-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+        .step-1 h3 { color: #0072f5; }
+        .step-2 h3 { color: #ff5b4f; }
+        .step-3 h3 { color: #059669; }
+        .step-4 h3 { color: #7c3aed; }
+
+        .steps-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .steps-grid .step-card {
+            flex: 1 1 calc(25% - 16px);
+            min-width: 200px;
+        }
+
+        /* CTA Button */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: var(--fg);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            width: 100%;
+            margin-top: 32px;
+            letter-spacing: -0.01em;
+        }
+
+        .btn-primary:hover { background: #000; }
+        .btn-primary svg { width: 16px; height: 16px; }
+
+        /* Categories Tab */
+        .selected-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 80px;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+            color: var(--muted);
+            font-size: 14px;
+            border: 1px dashed var(--border-strong);
+            border-radius: 8px;
+        }
+
+        .empty-state svg { width: 32px; height: 32px; margin-bottom: 12px; opacity: 0.5; }
+
+        .cat-item {
+            display: flex;
+            background: var(--bg);
+            border-radius: 8px;
+            box-shadow: 0px 0px 0px 1px var(--border);
+            overflow: hidden;
+        }
+
+        .cat-rank {
+            width: 56px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 12px 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .cat-rank button {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: inherit;
+            transition: background 0.15s;
+        }
+
+        .cat-rank button:hover { background: rgba(255,255,255,0.35); }
+        .cat-rank button svg { width: 14px; height: 14px; }
+
+        .cat-rank.fn-GV { background: #64748b; }
+        .cat-rank.fn-ID { background: #059669; }
+        .cat-rank.fn-PR { background: #7c3aed; }
+        .cat-rank.fn-DE { background: #d97706; }
+        .cat-rank.fn-RS { background: #db2777; }
+        .cat-rank.fn-RC { background: #2563eb; }
+
+        .cat-content { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+        .cat-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .cat-title { font-weight: 600; font-size: 14px; letter-spacing: -0.01em; }
+        .cat-id { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+        .cat-desc { font-size: 13px; color: var(--muted); }
+        .cat-notes { 
+            width: 100%; 
+            padding: 8px 12px; 
+            border: 1px solid var(--border); 
+            border-radius: 4px; 
+            font-size: 13px; 
+            font-family: var(--font);
+            resize: vertical;
+            min-height: 48px;
+            background: var(--surface);
+            color: var(--fg);
+            letter-spacing: -0.01em;
+        }
+        .cat-notes:focus { outline: 2px solid var(--focus); border-color: transparent; }
+
+        .cat-remove {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--muted);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .cat-remove:hover { background: var(--surface); color: var(--fg); }
+        .cat-remove svg { width: 16px; height: 16px; }
+
+        /* NIST Menu Grid */
+        .nist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .nist-section {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0px 0px 0px 1px var(--border);
+        }
+
+        .nist-section-header {
+            padding: 14px 16px;
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: -0.01em;
+            color: #fff;
+        }
+
+        .nist-section-header.fn-GV { background: #64748b; }
+        .nist-section-header.fn-ID { background: #059669; }
+        .nist-section-header.fn-PR { background: #7c3aed; }
+        .nist-section-header.fn-DE { background: #d97706; }
+        .nist-section-header.fn-RS { background: #db2777; }
+        .nist-section-header.fn-RC { background: #2563eb; }
+
+        .nist-section-header .header-phase { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 4px; margin-left: 10px; background: rgba(255,255,255,0.25); color: #fff; }
+
+        .nist-section-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--surface);
+        }
+
+        .nist-pill {
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0px 0px 0px 1px var(--border);
+        }
+
+        .nist-pill:hover { box-shadow: 0px 0px 0px 1px var(--border), 0px 2px 4px rgba(0,0,0,0.05); }
+        .nist-pill.selected { color: var(--fg); border-color: transparent; box-shadow: none; }
+        .nist-pill .pill-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .nist-pill .pill-id { font-size: 11px; font-family: var(--font-mono); opacity: 0.8; }
+        .nist-pill .pill-name { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+        .nist-pill .pill-desc { font-size: 12px; opacity: 0.85; }
+        .nist-pill .pill-icon { width: 14px; height: 14px; flex-shrink: 0; }
+        .nist-pill .pill-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: #dc2626; color: #fff; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
+.nist-pill .pill-phase { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 6px; border-radius: 3px; margin-left: 4px; }
+.nist-pill .pill-phase.phase-1 { background: #2563eb; color: #fff; }
+.nist-pill .pill-phase.phase-2 { background: #d97706; color: #fff; }
+.nist-pill .pill-phase.phase-3 { background: #059669; color: #fff; }
+        .nist-pill.selected .pill-icon { color: rgba(255,255,255,0.8); }
+
+        /* Risk Tier List */
+        .tier-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px;
+            background: var(--fg);
+            border-radius: 12px;
+        }
+
+        .tier-row {
+            display: flex;
+            min-height: 72px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .tier-label {
+            width: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .tier-content {
+            flex: 1;
+            padding: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: flex-start;
+            background: rgba(255,255,255,0.05);
+            border-radius: 0 8px 8px 0;
+            min-height: 72px;
+        }
+
+        .tier-S .tier-label { background: #ef4444; }
+        .tier-A .tier-label { background: #f97316; }
+        .tier-B .tier-label { background: #eab308; color: #171717; }
+        .tier-C .tier-label { background: #22c55e; }
+        .tier-D .tier-label { background: #3b82f6; }
+        .tier-E .tier-label { background: #6b7280; }
+
+        .risk-item {
+            padding: 8px 10px;
+            background: var(--bg);
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: grab;
+            max-width: 200px;
+            transition: all 0.15s ease;
+            box-shadow: 0px 0px 0px 1px var(--border);
+        }
+
+        .risk-item:hover { box-shadow: 0px 0px 0px 1px var(--border), 0px 2px 4px rgba(0,0,0,0.1); }
+        .risk-item:active { cursor: grabbing; }
+
+        .initiative-item {
+            padding: 12px;
+            background: var(--bg);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            cursor: grab;
+            position: relative;
+            transition: all 0.15s ease;
+        }
+        .initiative-item:hover { box-shadow: 0px 2px 8px rgba(0,0,0,0.1); }
+        .initiative-item .initiative-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--fg);
+            cursor: text;
+            min-height: 1.4em;
+        }
+        .initiative-item .initiative-title:focus { outline: none; }
+        .initiative-item .initiative-desc {
+            font-size: 11px;
+            color: var(--muted);
+            cursor: text;
+            min-height: 1.4em;
+        }
+        .initiative-item .initiative-desc:focus { outline: none; }
+        .initiative-item .delete-initiative {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 20px;
+            height: 20px;
+            border: none;
+            background: #ef4444;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: none;
+            line-height: 1;
+        }
+        .initiative-item:hover .delete-initiative { display: block; }
+        .initiative-item .initiative-content {
+            padding-top: 0;
+        }
+        .initiative-item .initiative-progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .initiative-item .progress-bar {
+            flex: 1;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .initiative-item .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.2s ease;
+        }
+        .initiative-item .progress-text {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--fg);
+            min-width: 28px;
+            text-align: right;
+        }
+
+        .initiative-section {
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .initiative-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+        .initiative-section-title {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .initiative-section-title .cat-id {
+            font-size: 11px;
+            font-family: var(--font-mono);
+            opacity: 0.7;
+            margin-right: 8px;
+        }
+        .add-initiative-btn {
+            padding: 6px 12px;
+            background: var(--fg);
+            color: var(--bg);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .add-initiative-btn:hover { opacity: 0.9; }
+        .initiative-section-content {
+            padding: 12px;
+            background: var(--surface);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 80px;
+        }
+        .initiative-item {
+            flex: 1 1 calc(33.33% - 8px);
+            min-width: 180px;
+            max-width: calc(33.33% - 8px);
+        }
+        .initiative-section-content:empty::before {
+            content: "No initiatives yet. Click '+ Add Initiative' to create one.";
+            color: var(--muted);
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .drag-over { background: rgba(0, 112, 243, 0.15) !important; border: 1px dashed var(--accent) !important; }
+        .risk-item .risk-name { font-weight: 600; margin-bottom: 2px; color: var(--fg); font-size: 12px; }
+        .risk-item .risk-desc { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .drag-over { background: rgba(0, 112, 243, 0.15) !important; border: 1px dashed var(--accent) !important; }
+
+        .risk-pool {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0px 0px 0px 1px var(--border);
+        }
+
+        .pool-header { 
+            font-weight: 600; 
+            font-size: 13px; 
+            margin-bottom: 16px; 
+            padding-bottom: 12px; 
+            border-bottom: 1px solid var(--border);
+            letter-spacing: -0.01em;
+        }
+
+        .pool-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 60px;
+        }
+
+        .pool-empty { 
+            width: 100%; 
+            text-align: center; 
+            color: var(--muted); 
+            font-size: 13px;
+            padding: 20px;
+        }
+
+        /* Info Box */
+        .info-box {
+            padding: 14px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-top: 20px;
+            border-left: 3px solid;
+        }
+
+        .info-box strong { font-weight: 600; }
+        .info-box em { font-style: normal; }
+
+        .info-blue { background: rgba(0, 112, 243, 0.06); border-color: #0072f5; color: #0072f5; }
+        .info-red { background: rgba(239, 68, 68, 0.06); border-color: #ef4444; color: #dc2626; }
+        .info-green { background: rgba(5, 150, 105, 0.06); border-color: #059669; color: #059669; }
+
+        /* Calendar */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .month-card {
+            background: var(--bg);
+            border-radius: 8px;
+            box-shadow: 0px 0px 0px 1px var(--border);
+            overflow: hidden;
+            min-height: 160px;
+        }
+
+        .month-header {
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        .month-content {
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-height: 100px;
+        }
+
+        .policy-item {
+            padding: 8px 48px 8px 10px;
+            background: var(--surface);
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: grab;
+            border: 1px solid var(--border);
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .policy-item:hover { box-shadow: 0px 0px 0px 1px var(--border), 0px 2px 4px rgba(0,0,0,0.05); }
+        .policy-item.minimum { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.04); }
+        .policy-item .policy-name { font-weight: 600; color: var(--fg); font-size: 11px; }
+        .policy-item .minimum-badge {
+            display: inline-block;
+            font-size: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #dc2626;
+            margin-left: 4px;
+        }
+
+        .policy-pool-section { margin-top: 24px; }
+
+        /* Checkbox */
+        .nist-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border-strong);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+            background: var(--bg);
+            z-index: 10;
+        }
+
+        .nist-checkbox.checked {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+
+        .nist-checkbox.checked svg {
+            width: 12px;
+            height: 12px;
+            color: #fff;
+        }
+
+        .nist-pill .nist-checkbox,
+        .cat-item .nist-checkbox {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+        }
+
+        .cat-item,
+        .nist-pill {
+            position: relative;
+        }
+
+        .cat-item.drag-over-insert {
+    border-top: 2px solid var(--accent);
+}
+
+/* Hidden */
+        .hidden { display: none !important; }
+
+        /* Focus */
+        *:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="header-inner">
+            <a href="#" class="logo">
+                <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="28" height="28" rx="6" fill="#171717"/>
+                    <path d="M8 14L12 18L20 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                NIST Master Plan
+            </a>
+            <nav>
+                <button onclick="switchTab('explainer')" id="tab-btn-explainer" class="tab-btn active">Home / 101</button>
+                <button onclick="switchTab('categories')" id="tab-btn-categories" class="tab-btn">Step 1: Categories</button>
+                <button onclick="switchTab('risks')" id="tab-btn-risks" class="tab-btn">Step 2: Risks</button>
+                <button onclick="switchTab('policies')" id="tab-btn-policies" class="tab-btn">Step 3: Policies</button>
+                <button onclick="switchTab('initiatives')" id="tab-btn-initiatives" class="tab-btn">Step 4: Initiatives</button>
+            </nav>
+            <div class="header-actions">
+                <button onclick="document.getElementById('file-upload').click()" class="icon-btn" title="Load JSON">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                </button>
+                <input type="file" id="file-upload" class="hidden" accept=".json" onchange="loadJSON(event)">
+                <button onclick="saveJSON()" class="icon-btn" title="Save JSON">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Toast -->
+    <div id="error-toast">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="error-message">Message</span>
+    </div>
+
+    <!-- TAB 1: Home / Explainer -->
+    <main id="tab-explainer">
+        <div class="card">
+            <h1>Cybersecurity Implementation Master Plan</h1>
+            <p class="subtitle">A practical guide to implementing NIST CSF 2.0 across your organization</p>
+
+            <div class="section" style="margin-top: 48px;">
+                <div class="section-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+                    <h2 style="margin: 0;">The 6 Core NIST Functions</h2>
+                </div>
+                <div class="function-grid">
+                    <div class="function-card fn-GV">
+                        <div class="function-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                            GOVERN<span class="phase-badge phase-1">Phase 1</span>
+                        </div>
+                        <div class="function-desc">
+                            <strong>What it is:</strong> Establishing strategy, policies, oversight, and managing risk.<br><br>
+                            <strong>Why it matters:</strong> Sets the foundation, aligns security directly with business goals, and ensures leadership buy-in.
+                        </div>
+                    </div>
+                    <div class="function-card fn-ID">
+                        <div class="function-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                            IDENTIFY<span class="phase-badge phase-1">Phase 1</span>
+                        </div>
+                        <div class="function-desc">
+                            <strong>What it is:</strong> Inventorying hardware, software, data, and mapping threats.<br><br>
+                            <strong>Why it matters:</strong> You cannot build defenses around things you do not know exist.
+                        </div>
+                    </div>
+                    <div class="function-card fn-PR">
+                        <div class="function-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+                            PROTECT<span class="phase-badge phase-1">Phase 1</span>
+                        </div>
+                        <div class="function-desc">
+                            <strong>What it is:</strong> Implementing safeguards like MFA, Antivirus, firewalls, and training.<br><br>
+                            <strong>Why it matters:</strong> Builds the defensive walls necessary to prevent or limit the impact of an attack.
+                        </div>
+                    </div>
+                    <div class="function-card fn-DE">
+                        <div class="function-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            DETECT<span class="phase-badge phase-2">Phase 2</span>
+                        </div>
+                        <div class="function-desc">
+                            <strong>What it is:</strong> Continuous system monitoring and hunting for anomalies.<br><br>
+                            <strong>Why it matters:</strong> Ensures you spot intruders rapidly before they cause catastrophic damage.
+                        </div>
+                    </div>
+                    <div class="function-card fn-RS">
+                        <div class="function-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v20"/><path d="M2 12h20"/><path d="M2 7h5"/><path d="M2 17h5"/><path d="M17 7h5"/><path d="M17 17h5"/></svg>
+                            RESPOND<span class="phase-badge phase-2">Phase 2</span>
+                        </div>
+                        <div class="function-desc">
+                            <strong>What it is:</strong> Incident response planning, immediate containment, and mitigation.<br><br>
+                            <strong>Why it matters:</strong> Prevents panic, provides a clear playbook, and stops active breaches from spreading.
+                        </div>
+                    </div>
+                    <div class="function-card fn-RC">
+                        <div class="function-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+                            RECOVER<span class="phase-badge phase-2">Phase 2</span>
+                        </div>
+                        <div class="function-desc">
+                            <strong>What it is:</strong> Executing backups, restoration operations, and team communication.<br><br>
+                            <strong>Why it matters:</strong> Ensures business continuity so you can bounce back quickly after a disaster.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <h2 style="margin: 0;">The Workshop: 4 Steps to Implementation</h2>
+                </div>
+                <div class="steps-grid">
+                    <div class="step-card step-1">
+                        <h3>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                            Step 1: Categories
+                        </h3>
+                        <p>Select overarching goals from the 6 NIST functions. Build and rank your priority list of core capabilities.</p>
+                    </div>
+                    <div class="step-card step-2">
+                        <h3>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                            Step 2: Risks
+                        </h3>
+                        <p>Rank common IT risks from S (Critical) to E (Low) using drag-and-drop. This directs your immediate budget and attention.</p>
+                    </div>
+                    <div class="step-card step-3">
+                        <h3>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            Step 3: Policies
+                        </h3>
+                        <p>Drag essential policies onto a 12-month rollout calendar. Schedule minimums first.</p>
+                    </div>
+                    <div class="step-card step-4">
+                        <h3>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Step 4: Initiatives
+                        </h3>
+                        <p>Create initiatives for each category to track implementation progress.</p>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="switchTab('categories')" class="btn-primary">
+                Start Step 1: Categories
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+        </div>
+    </main>
+
+    <!-- TAB 2: Categories -->
+    <main id="tab-categories" class="hidden">
+        <div class="card" style="margin-bottom: 32px;">
+            <div class="section-header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                <h2 style="margin: 0;">Selected Categories</h2>
+            </div>
+            <p class="subtitle">Rank these in order of priority using the arrows.</p>
+            <div id="selected-list-container" class="selected-container" style="margin-top: 20px;" ondragover="allowDrop(event)" ondrop="dropCategory(event)">
+                <div id="empty-state" class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                    Your category list is empty. Drag pills from below to add them.
+                </div>
+            </div>
+        </div>
+
+        <div class="section-header" style="margin-bottom: 20px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+            <h2 style="margin: 0; font-size: 20px;">The NIST Menu</h2>
+        </div>
+        <div id="categories-container" class="nist-grid" ondragover="allowDrop(event)" ondrop="dropCategory(event)"></div>
+    </main>
+
+    <!-- TAB 3: Risks -->
+    <main id="tab-risks" class="hidden">
+        <div style="margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                <h2 style="margin: 0;">Risk Assessment Tier List</h2>
+            </div>
+            <p class="subtitle">Drag and drop risks from the unassigned pool into the tiers. S-Tier represents immediate, existential threats.</p>
+            <div class="info-box info-blue" style="margin-top: 16px;">
+                <strong>Source &amp; Comprehensiveness:</strong> These 24 risks are <em>not</em> an exhaustive list, nor is there a specific "NIST Approved" risk list. NIST provides the framework to help you discover your own risks. These are curated based on industry-standard baselines (CIS Controls, common threat intel) representing the most frequent threats to modern businesses.
+            </div>
+        </div>
+
+        <div class="tier-list">
+            <div class="tier-row tier-S"><div class="tier-label">S</div><div id="tier-S" class="tier-content" ondragover="allowDrop(event)" ondrop="dropRisk(event, 'S')"></div></div>
+            <div class="tier-row tier-A"><div class="tier-label">A</div><div id="tier-A" class="tier-content" ondragover="allowDrop(event)" ondrop="dropRisk(event, 'A')"></div></div>
+            <div class="tier-row tier-B"><div class="tier-label">B</div><div id="tier-B" class="tier-content" ondragover="allowDrop(event)" ondrop="dropRisk(event, 'B')"></div></div>
+            <div class="tier-row tier-C"><div class="tier-label">C</div><div id="tier-C" class="tier-content" ondragover="allowDrop(event)" ondrop="dropRisk(event, 'C')"></div></div>
+            <div class="tier-row tier-D"><div class="tier-label">D</div><div id="tier-D" class="tier-content" ondragover="allowDrop(event)" ondrop="dropRisk(event, 'D')"></div></div>
+            <div class="tier-row tier-E"><div class="tier-label">E</div><div id="tier-E" class="tier-content" ondragover="allowDrop(event)" ondrop="dropRisk(event, 'E')"></div></div>
+        </div>
+
+        <div class="risk-pool" style="margin-top: 24px;">
+            <div class="pool-header">Unassigned Risks</div>
+            <div id="risk-pool" class="pool-content" ondragover="allowDrop(event)" ondrop="dropRisk(event, 'unassigned')"></div>
+        </div>
+    </main>
+
+    <!-- TAB 4: Policies -->
+    <main id="tab-policies" class="hidden">
+        <div style="margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <h2 style="margin: 0;">Policy Rollout Calendar</h2>
+            </div>
+            <p class="subtitle">Drag and drop policies into the 12-month calendar. The <span style="color: #ef4444; font-weight: 600;">Red "Minimums"</span> should ideally be scheduled in Months 1–3.</p>
+            <div class="info-box info-green" style="margin-top: 16px;">
+                <strong>Source &amp; Comprehensiveness:</strong> This is a baseline "Top 24" list, not a comprehensive library. NIST does not explicitly dictate a mandatory list of policies. Instead, NIST requires that policies exist to cover specific functions (Access Control, Incident Response). This list maps directly to those core NIST requirements.
+            </div>
+        </div>
+
+        <div class="calendar-grid" id="calendar-container"></div>
+
+        <div class="risk-pool policy-pool-section">
+            <div class="pool-header">Unassigned Policies</div>
+            <div id="policy-pool" class="pool-content" ondragover="allowDrop(event)" ondrop="dropPolicy(event, 'unassigned')"></div>
+        </div>
+    </main>
+
+    <!-- TAB 5: Initiatives -->
+    <main id="tab-initiatives" class="hidden">
+        <div class="section-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <h2 style="margin: 0;">Initiatives</h2>
+        </div>
+        <p class="subtitle">Create initiatives for each category based on your ranked priorities.</p>
+        <div id="initiatives-container"></div>
+    </main>
+
+    <script>
+        // --- 1. GLOBAL STATE & DATA ---
+        let appState = {
+            categories: [],
+            risks: [
+                { id: 'r1', name: 'Ransomware / Malware', desc: 'Execution of malicious code locking systems.', tier: 'unassigned', position: 0 },
+                { id: 'r2', name: 'Phishing & Social Eng.', desc: 'Employees tricked into giving credentials.', tier: 'unassigned', position: 0 },
+                { id: 'r3', name: 'Lost/Stolen Devices', desc: 'Laptops or phones left in public spaces.', tier: 'unassigned', position: 0 },
+                { id: 'r4', name: 'Insider Threat', desc: 'Malicious or accidental data destruction by staff.', tier: 'unassigned', position: 0 },
+                { id: 'r5', name: 'Unpatched Software', desc: 'Exploitation of known vulnerabilities.', tier: 'unassigned', position: 0 },
+                { id: 'r6', name: 'Weak Passwords', desc: 'Credential stuffing or lack of MFA.', tier: 'unassigned', position: 0 },
+                { id: 'r7', name: 'Cloud Misconfig', desc: 'Data accidentally exposed publicly on cloud.', tier: 'unassigned', position: 0 },
+                { id: 'r8', name: 'Hardware Failure', desc: 'Server crash without recent backups.', tier: 'unassigned', position: 0 },
+                { id: 'r9', name: 'Third-Party Breach', desc: 'A vendor we use gets hacked.', tier: 'unassigned', position: 0 },
+                { id: 'r10', name: 'Physical Break-in', desc: 'Unauthorized access to office/server room.', tier: 'unassigned', position: 0 },
+                { id: 'r11', name: 'DDoS Attacks', desc: 'Overwhelming network resources to cause downtime.', tier: 'unassigned', position: 0 },
+                { id: 'r12', name: 'Shadow IT', desc: 'Unauthorized software/tools used by employees.', tier: 'unassigned', position: 0 },
+                { id: 'r13', name: 'Business Email Compromise', desc: 'Hackers hijacking executive emails for wire fraud.', tier: 'unassigned', position: 0 },
+                { id: 'r14', name: 'Data Exfiltration', desc: 'Unauthorized copying or transfer of sensitive data.', tier: 'unassigned', position: 0 },
+                { id: 'r15', name: 'Zero-Day Exploits', desc: 'Attacks on unknown software vulnerabilities.', tier: 'unassigned', position: 0 },
+                { id: 'r16', name: 'Supply Chain Attacks', desc: 'Compromise of a trusted hardware/software provider.', tier: 'unassigned', position: 0 },
+                { id: 'r17', name: 'Rogue Wi-Fi Networks', desc: 'Employees connecting to insecure or spoofed public Wi-Fi.', tier: 'unassigned', position: 0 },
+                { id: 'r18', name: 'Inadequate Logging', desc: 'Inability to trace an attack due to missing logs.', tier: 'unassigned', position: 0 },
+                { id: 'r19', name: 'Privilege Escalation', desc: 'Standard users gaining admin-level access.', tier: 'unassigned', position: 0 },
+                { id: 'r20', name: 'AI/Deepfake Manipulation', desc: 'Using AI tools for advanced social engineering.', tier: 'unassigned', position: 0 },
+                { id: 'r21', name: 'Prompt Injection', desc: 'Malicious inputs causing AI to bypass safety or leak data.', tier: 'unassigned', position: 0 },
+                { id: 'r22', name: 'Autonomous AI Malfunction', desc: 'AI agents executing unintended, harmful automated actions.', tier: 'unassigned', position: 0 },
+                { id: 'r23', name: 'API Exploitation', desc: 'Attackers accessing backend data through unsecured APIs.', tier: 'unassigned', position: 0 },
+                { id: 'r24', name: 'Regulatory/Compliance Failure', desc: 'Fines from data privacy violations (GDPR, HIPAA).', tier: 'unassigned', position: 0 }
+            ],
+            projects: [],
+            policies: [
+                { id: 'p1', name: 'Acceptable Use Policy', desc: 'Rules for using company devices.', isMinimum: true, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p2', name: 'Access Control & Password', desc: 'Rules for MFA and password strength.', isMinimum: true, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p3', name: 'Incident Response Plan', desc: 'Who to call when a breach happens.', isMinimum: true, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p4', name: 'Onboarding & Offboarding', desc: 'IT checklist for new/leaving hires.', isMinimum: true, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p5', name: 'Data Backup & Recovery', desc: 'Frequency and testing of backups.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p6', name: 'BYOD / Mobile Device', desc: 'Rules for personal phones with company email.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p7', name: 'Remote Work / VPN', desc: 'Security requirements for home Wi-Fi.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p8', name: 'Patch Management', desc: 'Schedule for updating OS and software.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p9', name: 'Vendor Risk Management', desc: 'How we vet 3rd party software.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p10', name: 'Clean Desk Policy', desc: 'Securing physical documents and screens.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p11', name: 'Data Classification', desc: 'Defining Public, Internal, Confidential data.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p12', name: 'Info Security Policy', desc: 'Master document outlining overall security strategy.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p13', name: 'Cryptography & Encryption', desc: 'Rules for encrypting data at rest and in transit.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p14', name: 'Physical Security', desc: 'Rules for visitor logs, badges, and server room access.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p15', name: 'Network Security', desc: 'Rules for firewalls, Wi-Fi, and network segmentation.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p16', name: 'Software Dev Lifecycle (SDLC)', desc: 'Security rules for writing custom code.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p17', name: 'Vulnerability Management', desc: 'Frequency of scanning and remediation timelines.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p18', name: 'Cloud Security', desc: 'Rules for deploying and managing cloud resources.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p19', name: 'AI Usage Policy', desc: 'Guidelines on using public and internal AI tools.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p20', name: 'Social Media Policy', desc: 'Rules for what employees can post regarding company systems.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p21', name: 'Data Privacy & Retention', desc: 'Rules for data lifespan and consumer privacy rights.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p22', name: 'Secure AI Integration', desc: 'Rules for connecting internal systems to external LLMs/Agents.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p23', name: 'API Management Policy', desc: 'Standards for authenticating and securing API endpoints.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false },
+                { id: 'p24', name: 'Business Continuity (BCP)', desc: 'How the business survives a prolonged major disaster.', isMinimum: false, month: 'unassigned', position: 0, isChecked: false }
+            ]
+        };
+
+        const nistMenuData = [
+            { functionId: 'GV', functionName: 'Govern', colorClass: 'fn-GV', phase: 1,
+                categories: [
+                    { id: 'GV.OC', name: 'Organizational Context', desc: 'Understanding business mission & legal requirements.' },
+                    { id: 'GV.RM', name: 'Risk Management', desc: 'Defining the organization\'s risk tolerance.' },
+                    { id: 'GV.RR', name: 'Roles & Responsibilities', desc: 'Establishing exactly who is in charge of security.' },
+                    { id: 'GV.PO', name: 'Policy', desc: 'Creating written cybersecurity rules.', foundational: true },
+                    { id: 'GV.OV', name: 'Oversight', desc: 'Checking to ensure policies are followed.' },
+                    { id: 'GV.SC', name: 'Supply Chain Risk', desc: 'Managing risks from third-party vendors.' }
+                ]
+            },
+            { functionId: 'ID', functionName: 'Identify', colorClass: 'fn-ID', phase: 1,
+                categories: [
+                    { id: 'ID.AM', name: 'Asset Management', desc: 'Inventorying hardware, software, data.', foundational: true },
+                    { id: 'ID.RA', name: 'Risk Assessment', desc: 'Identifying vulnerabilities and threats.', foundational: true },
+                    { id: 'ID.IM', name: 'Improvement', desc: 'Updating risk understanding.' }
+                ]
+            },
+            { functionId: 'PR', functionName: 'Protect', colorClass: 'fn-PR', phase: 1,
+                categories: [
+                    { id: 'PR.AA', name: 'Identity & Access', desc: 'Securing passwords, enforcing MFA.' },
+                    { id: 'PR.AT', name: 'Awareness & Training', desc: 'Teaching employees to spot phishing.', foundational: true },
+                    { id: 'PR.DS', name: 'Data Security', desc: 'Keeping data encrypted.' },
+                    { id: 'PR.PS', name: 'Platform Security', desc: 'Antivirus, UEM, OS hardening.', foundational: true },
+                    { id: 'PR.IR', name: 'Tech Resilience', desc: 'Network segmentation, architecture.', foundational: true }
+                ]
+            },
+            { functionId: 'DE', functionName: 'Detect', colorClass: 'fn-DE', phase: 1,
+                categories: [
+                    { id: 'DE.CM', name: 'Continuous Monitoring', desc: 'Watching logs for anomalies.', foundational: true },
+                    { id: 'DE.AE', name: 'Adverse Event Analysis', desc: 'Investigating anomalies.' }
+                ]
+            },
+            { functionId: 'RS', functionName: 'Respond', colorClass: 'fn-RS', phase: 2,
+                categories: [
+                    { id: 'RS.MA', name: 'Incident Management', desc: 'Activating the response plan.', foundational: true },
+                    { id: 'RS.AN', name: 'Incident Analysis', desc: 'Figuring out what attackers are doing.' },
+                    { id: 'RS.CO', name: 'Communication', desc: 'Notifying leadership & IT.', foundational: true },
+                    { id: 'RS.MI', name: 'Mitigation', desc: 'Containing the threat.' }
+                ]
+            },
+            { functionId: 'RC', functionName: 'Recover', colorClass: 'fn-RC', phase: 2,
+                categories: [
+                    { id: 'RC.RP', name: 'Recovery Execution', desc: 'Restoring from backups.', foundational: true },
+                    { id: 'RC.CO', name: 'Communication', desc: 'Conducting lessons learned.' }
+                ]
+            }
+        ];
+
+        let draggedType = null;
+        let draggedId = null;
+        let draggedCategoryId = null;
+
+        // --- 2. INITIALIZATION ---
+        function init() {
+            const saved = localStorage.getItem('nist-master-plan');
+            if (saved) {
+                try {
+                    appState = JSON.parse(saved);
+                    if (!appState.projects) appState.projects = [];
+                    showMsg("Master Plan Loaded!");
+                } catch(e) {
+                    console.error('Failed to load from localStorage', e);
+                }
+            }
+            buildCalendar();
+            renderAll();
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('nist-master-plan', JSON.stringify(appState));
+            } catch(e) {
+                console.error('Failed to save to localStorage', e);
+            }
+        }
+
+        function renderAll() {
+            renderNistMenu();
+            renderSelectedCategories();
+            renderRisks();
+            renderPolicies();
+            renderInitiatives();
+        }
+
+        function renderInitiatives() {
+            const container = document.getElementById('initiatives-container');
+            if (!container) return;
+
+            if (appState.categories.length === 0) {
+                container.innerHTML = '<div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>Select categories in Step 1 first.</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+
+            appState.categories.forEach((cat, index) => {
+                // Get initiatives for this category
+                const catProjects = appState.projects.find(p => p.categoryId === cat.id);
+                const initiatives = catProjects ? catProjects.initiatives : [];
+
+                const section = document.createElement('div');
+                section.className = 'initiative-section';
+                section.innerHTML = `
+                    <div class="initiative-section-header">
+                        <div class="initiative-section-title">
+                            <span class="cat-id">${cat.id}</span>
+                            ${cat.name}
+                        </div>
+                        <button class="add-initiative-btn" onclick="addInitiative('${cat.id}')">+ Add Initiative</button>
+                    </div>
+                    <div class="initiative-section-content" id="init-content-${cat.id}" data-category-id="${cat.id}" ondragover="allowDrop(event)" ondrop="dropInitiative(event, '${cat.id}')">
+                        ${initiatives.map(init => `
+                            <div class="initiative-item" draggable="true" ondragstart="onDragStart(event, 'initiative', '${init.id}', '${cat.id}')" ondragend="onDragEnd(event)">
+                                <div class="initiative-content">
+                                    <div class="initiative-title" contenteditable="true" onblur="updateInitiative('${cat.id}', '${init.id}', 'title', this.textContent)">${init.title}</div>
+                                    <div class="initiative-desc" contenteditable="true" onblur="updateInitiative('${cat.id}', '${init.id}', 'description', this.textContent)">${init.description || ''}</div>
+                                    <div class="initiative-progress" data-category-id="${cat.id}" data-initiative-id="${init.id}">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: ${init.progress}%; background: ${init.progress === 0 ? '#9ca3af' : init.progress <= 30 ? '#ef4444' : init.progress <= 60 ? '#f97316' : init.progress <= 90 ? '#eab308' : '#22c55e'}"></div>
+                                        </div>
+                                        <span class="progress-text">${init.progress}%</span>
+                                    </div>
+                                </div>
+                                <button class="delete-initiative" onclick="deleteInitiative('${cat.id}', '${init.id}')">×</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(section);
+            });
+        }
+
+        function buildCalendar() {
+            const container = document.getElementById('calendar-container');
+            let html = '';
+            for (let i = 1; i <= 12; i++) {
+                html += `<div class="month-card" id="month-${i}" ondragover="allowDrop(event)" ondrop="dropPolicy(event, ${i})">
+                    <div class="month-header">Month ${i}</div>
+                    <div class="month-content" id="month-content-${i}"></div>
+                </div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        // --- 3. CATEGORIES ---
+        function renderNistMenu() {
+            const container = document.getElementById('categories-container');
+            container.innerHTML = '';
+            nistMenuData.forEach(func => {
+                const section = document.createElement('div');
+                section.className = 'nist-section';
+                section.innerHTML = `<div class="nist-section-header ${func.colorClass}">${func.functionId} — ${func.functionName}${func.phase ? `<span class="header-phase">Phase ${func.phase}</span>` : ''}</div>`;
+                
+                const body = document.createElement('div');
+                body.className = 'nist-section-body';
+
+                func.categories.forEach(cat => {
+                    // Skip if already in selected list
+                    if (appState.categories.some(item => item.id === cat.id)) return;
+
+                    const pill = document.createElement('div');
+                    pill.className = 'nist-pill';
+                    pill.setAttribute('draggable', 'true');
+                    pill.addEventListener('dragstart', (e) => onDragStart(e, 'category', cat.id));
+                    pill.addEventListener('dragend', onDragEnd);
+                    pill.innerHTML = `
+                        <div class="pill-top">
+                            <span class="pill-id">${cat.id}${cat.foundational ? '<span class="pill-badge">Required</span>' : ''}</span>
+                        </div>
+                        <div class="pill-name">${cat.name}</div>
+                        <div class="pill-desc">${cat.desc}</div>
+                    `;
+                    body.appendChild(pill);
+                });
+                section.appendChild(body);
+                container.appendChild(section);
+            });
+        }
+
+        function renderSelectedCategories() {
+            const container = document.getElementById('selected-list-container');
+            const emptyState = document.getElementById('empty-state');
+            const hadItems = appState.categories.length > 0;
+
+            if (!hadItems) {
+                container.innerHTML = '';
+                container.appendChild(emptyState);
+                emptyState.style.display = '';
+                return;
+            }
+            emptyState.style.display = 'none';
+            // Remove all children except empty-state
+            Array.from(container.children).forEach(child => {
+                if (child !== emptyState) container.removeChild(child);
+            });
+
+            appState.categories.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'cat-item';
+                card.setAttribute('draggable', 'true');
+                card.addEventListener('dragstart', (e) => onDragStart(e, 'selected-category', item.id));
+                card.addEventListener('dragend', onDragEnd);
+                card.innerHTML = `
+                    <div class="cat-rank ${item.colorClass}">
+                        <span>#${index + 1}</span>
+                    </div>
+                    <div class="cat-content" style="position: relative;">
+                        <div onclick="event.stopPropagation(); toggleCheckbox('category', '${item.id}')" class="nist-checkbox ${item.isChecked ? 'checked' : ''}" style="position: absolute; top: 16px; right: 16px; z-index: 10;">
+                            ${item.isChecked ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                        </div>
+                        <div class="cat-top">
+                            <div>
+                                <div class="cat-title">${item.name}</div>
+                                <div class="cat-id">${item.id}</div>
+                            </div>
+                            <button onclick="removeCategory('${item.id}')" class="cat-remove">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <div class="cat-desc">${item.desc}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function toggleCategory(cat, func) {
+            // Only allow removal via click, not adding
+            const index = appState.categories.findIndex(item => item.id === cat.id);
+            if (index > -1) appState.categories.splice(index, 1);
+            renderNistMenu();
+            renderSelectedCategories();
+        }
+
+        function removeCategory(id) {
+            appState.categories = appState.categories.filter(item => item.id !== id);
+            renderNistMenu();
+            renderSelectedCategories();
+        }
+
+        function moveCategory(index, dir) {
+            const newIndex = index + dir;
+            if (newIndex < 0 || newIndex >= appState.categories.length) return;
+            [appState.categories[index], appState.categories[newIndex]] = [appState.categories[newIndex], appState.categories[index]];
+            renderSelectedCategories();
+        }
+
+        function updateCatNotes(id, text) {
+            const item = appState.categories.find(i => i.id === id);
+            if (item) item.notes = text;
+        }
+
+        function dropCategory(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+
+            // Check if dropped on the NIST menu (categories container)
+            const categoriesContainer = document.getElementById('categories-container');
+            const isOverMenu = event.currentTarget === categoriesContainer ||
+                               categoriesContainer.contains(event.currentTarget);
+
+            if (draggedType === 'selected-category' && isOverMenu) {
+                // Dropped back on menu - remove from selected list
+                appState.categories = appState.categories.filter(c => c.id !== draggedId);
+                renderNistMenu();
+                renderSelectedCategories();
+                return;
+            }
+
+            if (draggedType === 'category') {
+                // New category from menu
+                const cat = nistMenuData.flatMap(f => f.categories).find(c => c.id === draggedId);
+                const func = nistMenuData.find(f => f.categories.some(c => c.id === draggedId));
+                if (!cat || appState.categories.some(c => c.id === cat.id)) return;
+
+                const container = document.getElementById('selected-list-container');
+                const containerRect = container.getBoundingClientRect();
+                const adjustedY = event.clientY - containerRect.top;
+
+                const items = container.querySelectorAll('.cat-item');
+                let insertIndex = appState.categories.length;
+
+                for (let i = 0; i < items.length; i++) {
+                    const rect = items[i].getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2 - containerRect.top;
+                    if (adjustedY < midY) {
+                        insertIndex = i;
+                        break;
+                    }
+                }
+
+                appState.categories.splice(insertIndex, 0, {
+                    id: cat.id, name: cat.name, desc: cat.desc,
+                    functionId: func.functionId, colorClass: func.colorClass,
+                    notes: '', isChecked: false
+                });
+            } else if (draggedType === 'selected-category') {
+                // Reordering within selected list
+                const fromIndex = appState.categories.findIndex(c => c.id === draggedId);
+                if (fromIndex === -1) return;
+
+                const container = document.getElementById('selected-list-container');
+                const containerRect = container.getBoundingClientRect();
+                const adjustedY = event.clientY - containerRect.top;
+
+                const items = container.querySelectorAll('.cat-item');
+                let toIndex = appState.categories.length;
+
+                for (let i = 0; i < items.length; i++) {
+                    const rect = items[i].getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2 - containerRect.top;
+                    if (adjustedY < midY) {
+                        toIndex = i;
+                        break;
+                    }
+                }
+
+                if (toIndex === fromIndex) return;
+                const [item] = appState.categories.splice(fromIndex, 1);
+                if (toIndex > fromIndex) toIndex--;
+                appState.categories.splice(toIndex, 0, item);
+            }
+
+            renderNistMenu();
+            renderSelectedCategories();
+        }
+
+        function toggleCheckbox(type, id) {
+            if (type === 'category') {
+                const item = appState.categories.find(i => i.id === id);
+                if (item) item.isChecked = !item.isChecked;
+                renderSelectedCategories();
+            } else if (type === 'policy') {
+                const pol = appState.policies.find(p => p.id === id);
+                if (pol) pol.isChecked = !pol.isChecked;
+                renderPolicies();
+            }
+        }
+
+        // --- 4. DRAG & DROP ---
+        function onDragStart(event, type, id, categoryId) {
+            draggedType = type;
+            draggedId = id;
+            draggedCategoryId = categoryId || null;
+            event.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => { event.target.style.opacity = '0.5'; }, 0);
+        }
+
+        function onDragEnd(event) {
+            event.target.style.opacity = '1';
+            draggedType = null;
+            draggedId = null;
+            draggedCategoryId = null;
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        }
+
+        function allowDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+        }
+
+        // --- 5. RISKS ---
+        function renderRisks() {
+            const pools = { 'unassigned': '', 'S': '', 'A': '', 'B': '', 'C': '', 'D': '', 'E': '' };
+            
+            appState.risks.forEach(risk => {
+                const html = `<div class="risk-item" draggable="true" ondragstart="onDragStart(event, 'risk', '${risk.id}')" ondragend="onDragEnd(event)">
+                    <div class="risk-name">${risk.name}</div>
+                    <div class="risk-desc" title="${risk.desc}">${risk.desc}</div>
+                </div>`;
+                pools[risk.tier] += html;
+            });
+
+            document.getElementById('risk-pool').innerHTML = pools['unassigned'] || '<div class="pool-empty">All assigned!</div>';
+            ['S', 'A', 'B', 'C', 'D', 'E'].forEach(tier => {
+                document.getElementById(`tier-${tier}`).innerHTML = pools[tier] || '';
+            });
+        }
+
+        function dropRisk(event, tier) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            if (draggedType !== 'risk') return;
+
+            const risk = appState.risks.find(r => r.id === draggedId);
+            if (!risk) return;
+
+            const tierContent = document.getElementById(`tier-${tier}`);
+            const containerRect = tierContent.getBoundingClientRect();
+            const adjustedY = event.clientY - containerRect.top;
+
+            const items = tierContent.querySelectorAll('.risk-item');
+            let insertIndex = appState.risks.filter(r => r.tier === tier).length;
+
+            for (let i = 0; i < items.length; i++) {
+                const rect = items[i].getBoundingClientRect();
+                const midY = rect.top + rect.height / 2 - containerRect.top;
+                if (adjustedY < midY) {
+                    insertIndex = i;
+                    break;
+                }
+            }
+
+            const oldTier = risk.tier;
+            risk.tier = tier;
+
+            // Reorder within tier if same tier
+            if (oldTier === tier) {
+                const currentIdx = appState.risks.findIndex(r => r.id === risk.id);
+                if (currentIdx !== -1) {
+                    // Remove from current position
+                    appState.risks.splice(currentIdx, 1);
+                    // Find where to insert based on position among same-tier risks
+                    const sameTierAfter = appState.risks.filter(r => r.tier === tier);
+                    const insertIdx = Math.min(insertIndex, sameTierAfter.length);
+                    appState.risks.splice(currentIdx < insertIdx ? insertIdx : insertIdx, 0, risk);
+                }
+            }
+            risk.position = insertIndex;
+
+            renderRisks();
+        }
+
+        // --- 6. POLICIES ---
+        function renderPolicies() {
+            let poolHtml = '';
+            const monthHtml = {1:'', 2:'', 3:'', 4:'', 5:'', 6:'', 7:'', 8:'', 9:'', 10:'', 11:'', 12:''};
+
+            appState.policies.forEach(pol => {
+                const badge = pol.isMinimum ? '<span class="minimum-badge">Min</span>' : '';
+                const html = `<div class="policy-item ${pol.isMinimum ? 'minimum' : ''}" draggable="true" ondragstart="onDragStart(event, 'policy', '${pol.id}')" ondragend="onDragEnd(event)">
+                    <div onclick="event.stopPropagation(); toggleCheckbox('policy', '${pol.id}')" class="nist-checkbox ${pol.isChecked ? 'checked' : ''}" style="position: absolute; top: 8px; right: 8px;">
+                        ${pol.isChecked ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                    </div>
+                    <div class="policy-name">${pol.name}${badge}</div>
+                </div>`;
+                if (pol.month === 'unassigned') poolHtml += html;
+                else monthHtml[pol.month] += html;
+            });
+
+            document.getElementById('policy-pool').innerHTML = poolHtml || '<div class="pool-empty">All assigned!</div>';
+            for (let i = 1; i <= 12; i++) {
+                document.getElementById(`month-content-${i}`).innerHTML = monthHtml[i];
+            }
+        }
+
+        function dropPolicy(event, month) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            if (draggedType !== 'policy') return;
+
+            const policy = appState.policies.find(p => p.id === draggedId);
+            if (!policy) return;
+
+            const monthContent = document.getElementById(`month-content-${month}`);
+            if (!monthContent) return;
+
+            const containerRect = monthContent.getBoundingClientRect();
+            const adjustedY = event.clientY - containerRect.top;
+
+            const items = monthContent.querySelectorAll('.policy-item');
+            let insertIndex = appState.policies.filter(p => p.month === month).length;
+
+            for (let i = 0; i < items.length; i++) {
+                const rect = items[i].getBoundingClientRect();
+                const midY = rect.top + rect.height / 2 - containerRect.top;
+                if (adjustedY < midY) {
+                    insertIndex = i;
+                    break;
+                }
+            }
+
+            const oldMonth = policy.month;
+
+            // Reorder within month if same month
+            if (oldMonth === month) {
+                const currentIdx = appState.policies.findIndex(p => p.id === policy.id);
+                if (currentIdx !== -1) {
+                    // Remove from current position
+                    appState.policies.splice(currentIdx, 1);
+                    // Find where to insert based on position among same-month policies
+                    const sameMonthAfter = appState.policies.filter(p => p.month === month);
+                    const insertIdx = Math.min(insertIndex, sameMonthAfter.length);
+                    appState.policies.splice(currentIdx < insertIdx ? insertIdx : insertIdx, 0, policy);
+                }
+            } else {
+                policy.month = month;
+            }
+            policy.position = insertIndex;
+
+            renderPolicies();
+        }
+
+        // --- 6. INITIATIVE CRUD ---
+        function addInitiative(categoryId) {
+            const id = 'init-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            const newInitiative = { id, title: 'New Initiative', description: '', progress: 0 };
+
+            let catProjects = appState.projects.find(p => p.categoryId === categoryId);
+            if (!catProjects) {
+                catProjects = { categoryId, initiatives: [] };
+                appState.projects.push(catProjects);
+            }
+            catProjects.initiatives.push(newInitiative);
+
+            saveToLocalStorage();
+            renderInitiatives();
+        }
+
+        function deleteInitiative(categoryId, initiativeId) {
+            const catProjects = appState.projects.find(p => p.categoryId === categoryId);
+            if (catProjects) {
+                catProjects.initiatives = catProjects.initiatives.filter(i => i.id !== initiativeId);
+            }
+            saveToLocalStorage();
+            renderInitiatives();
+        }
+
+        function updateInitiative(categoryId, initiativeId, field, value) {
+            const catProjects = appState.projects.find(p => p.categoryId === categoryId);
+            if (catProjects) {
+                const init = catProjects.initiatives.find(i => i.id === initiativeId);
+                if (init) {
+                    init[field] = value;
+                    saveToLocalStorage();
+                }
+            }
+        }
+
+        function dropInitiative(event, categoryId) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            if (draggedType !== 'initiative') return;
+
+            const catProjects = appState.projects.find(p => p.categoryId === categoryId);
+            if (!catProjects) return;
+
+            const init = catProjects.initiatives.find(i => i.id === draggedId);
+            if (!init) return;
+
+            const container = event.currentTarget;
+            const containerRect = container.getBoundingClientRect();
+            const adjustedY = event.clientY - containerRect.top;
+
+            const items = container.querySelectorAll('.initiative-item');
+            let insertIndex = catProjects.initiatives.length;
+
+            for (let i = 0; i < items.length; i++) {
+                const rect = items[i].getBoundingClientRect();
+                const midY = rect.top + rect.height / 2 - containerRect.top;
+                if (adjustedY < midY) {
+                    insertIndex = i;
+                    break;
+                }
+            }
+
+            // Remove from current position
+            catProjects.initiatives = catProjects.initiatives.filter(i => i.id !== draggedId);
+            // Insert at new position
+            catProjects.initiatives.splice(insertIndex, 0, init);
+
+            saveToLocalStorage();
+            renderInitiatives();
+        }
+
+        function updateProgress(categoryId, initiativeId, newProgress) {
+            const catProjects = appState.projects.find(p => p.categoryId === categoryId);
+            if (catProjects) {
+                const init = catProjects.initiatives.find(i => i.id === initiativeId);
+                if (init) {
+                    init.progress = Math.max(0, Math.min(100, parseInt(newProgress) || 0));
+                    saveToLocalStorage();
+                    renderInitiatives();
+                }
+            }
+        }
+
+        // --- 7. UTILS ---
+        function switchTab(tabId) {
+            ['explainer', 'categories', 'risks', 'policies', 'initiatives'].forEach(id => {
+                document.getElementById(`tab-${id}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${id}`).classList.remove('active');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabId}`).classList.add('active');
+        }
+
+        function showMsg(msg) {
+            const toast = document.getElementById('error-toast');
+            document.getElementById('error-message').innerText = msg;
+            toast.style.display = 'flex';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        // --- 8. PROGRESS DRAG ---
+        let dragProgress = { active: false, categoryId: null, initiativeId: null };
+
+        document.addEventListener('mousedown', function(e) {
+            const progressEl = e.target.closest('.initiative-progress');
+            if (progressEl) {
+                dragProgress.active = true;
+                dragProgress.categoryId = progressEl.dataset.categoryId;
+                dragProgress.initiativeId = progressEl.dataset.initiativeId;
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!dragProgress.active) return;
+            const el = document.querySelector(`[data-initiative-id="${dragProgress.initiativeId}"] .progress-bar`);
+            if (el) {
+                const rect = el.getBoundingClientRect();
+                const percent = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+                updateProgress(dragProgress.categoryId, dragProgress.initiativeId, percent);
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            dragProgress.active = false;
+        });
+
+        function saveJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+            const node = document.createElement('a');
+            node.setAttribute("href", dataStr);
+            node.setAttribute("download", "nist_master_plan.json");
+            document.body.appendChild(node);
+            node.click();
+            node.remove();
+            showMsg("Master Plan Saved!");
+        }
+
+        function loadJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let jsonStr = e.target.result.trim();
+                    // Strip data URL prefix if present
+                    const dataPrefix = 'data:text/json;charset=utf-8,';
+                    if (jsonStr.startsWith(dataPrefix)) {
+                        jsonStr = decodeURIComponent(jsonStr.substring(dataPrefix.length));
+                    }
+                    const parsed = JSON.parse(jsonStr);
+                    if (Array.isArray(parsed)) {
+                        appState.categories = parsed;
+                        showMsg("Legacy categories loaded!");
+                    } else {
+                        appState = parsed;
+                        if (!appState.projects) appState.projects = [];
+                        showMsg("Master Plan Loaded!");
+                    }
+                    renderAll();
+                } catch(err) {
+                    console.error('JSON parse error:', err);
+                    showMsg("Error: Invalid JSON file.");
+                }
+                document.getElementById('file-upload').value = '';
+            }
+            reader.readAsText(file);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
